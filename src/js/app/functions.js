@@ -14,8 +14,6 @@ function toggleDisplay(id, status) {
     elem.classList.add("w3-hide");
   } else if (status == "show") {
     elem.classList.remove("w3-hide");
-  } else {
-    console.error("unexpected value of 'show' in 'toggleDisplay()'");
   }
 }
 
@@ -34,7 +32,6 @@ function updateAlertMessage(colorClass, messageHtml, interval) {
 // Get the URL parameters
 function getUrlParam() {
 
-  console.log('getUrlParam()');
   const queryString = window.location.search;
 
   if (queryString.length != 0) {
@@ -55,15 +52,14 @@ function getUrlParam() {
 // Show a text input field is the user opts to get called via other number/address
 function checkSelectValue(value) {
 
-    console.log('checkSelectValue()');
   if (value == "other") {
-    toggleDisplay("call1", "show");
+    toggleDisplay(CALL1_ID, "show");
     callOneSetting = 'other';
   } else {
     callOneSetting = 'email';
-    callOneValue = userEmail;
-    document.getElementById('call1').value = userEmail;
-    toggleDisplay("call1", "hide");
+    //callOneValue = userEmail;
+    //document.getElementById(CALL1_ID).value = userEmail;
+    toggleDisplay(CALL1_ID, "hide");
   }
   storeUserPref();
 }
@@ -86,111 +82,23 @@ function toggleSettings() {
 function setDefaults() {
     
   // load the user's preferences
-  console.log("setDefaults()");
   if(userCli.length > 0){
     document.getElementById("callerId").value = userCli;
   }
   if(callOneSetting.length > 0){
-    document.getElementById('call1Settings').value = callOneSetting;
+    document.getElementById(CALL1_SETTINGS_ID).value = callOneSetting;
   }
   if(callOneValue.length > 0){
-    document.getElementById('call1').value = callOneValue;
+    document.getElementById(CALL1_ID).value = callOneValue;
   }
 
   if(callOneSetting == 'other'){
-    toggleDisplay("call1", "show");
+    toggleDisplay(CALL1_ID, "show");
   }else{
-    toggleDisplay("call1", "hide");
+    toggleDisplay(CALL1_ID, "hide");
   }
 
 }
-
-/*
- *
- * Get an access token from the Sonetel API
- *
- * Documentation: https://docs.sonetel.com/docs/sonetel-documentation/b3A6MTUxMzg1OTc-create-token
- *
- */
-async function getSonetelToken() {
-
-  // Show a spinner while getting a token
-  simpleToggle("spinnerModal");
-
-  console.log("get token");
-
-  myHeaders = new Headers();
-  myHeaders.append(
-    "Authorization",
-    "Basic " + btoa("sonetel-web" + ":" + "sonetel-web")
-  );
-
-  const response = await fetch(AUTH_API, {
-    method: "post",
-    headers: myHeaders,
-    body: new FormData(document.getElementById("loginForm")),
-  });
-  //Hide the spinner once we get the response
-  simpleToggle("spinnerModal");
-
-  if (response.ok) {
-    return response.json();
-  } else {
-    var message;
-    switch (response.status) {
-      case 400:
-        message = "Incorrect password";
-        break;
-      case 401:
-        message = "Incorrect username";
-        break;
-    }
-    //const message = `${response.status}`;
-    throw new Error(message);
-  }
-}
-
-// Check if the access token is valid
-async function checkAccessToken(access_token) {
-  //
-  myHeaders = new Headers();
-  myHeaders.append(
-    "Authorization",
-    "Bearer " + access_token
-  );
-  
-  const uri = API_BASE + '/account';
-  const response = await fetch(uri, {
-    method: "GET",
-    headers: myHeaders,
-  });
-  
-
-  if (response.ok) {
-    // The token is OK.
-    return true;
-
-  } else {
-
-    if(response.status == 401){
-      // refresh the access token
-      return refreshAccessToken(window.localStorage.get('refresh_token'));
-    }else if(response.status >= 500 && response.status <= 599){
-      return false;
-    }
-    
-  }
-}
-
-// Refresh the access token using the refresh_token
-async function refreshAccessToken(refresh_token) {
-  //
-}
-
-// Decode the token
-function decodeJwt(token) {
-    return JSON.parse(atob(token.split(".")[1]));
-  }
 
 // Store the updated cli setting
 function updateCliSetting() {
@@ -212,10 +120,16 @@ function storeUserPref() {
 
 function loadUserPref() {
 
-    console.log('load user pref');
-
     userPref = JSON.parse(window.localStorage.getItem(userPrefCache));
     callOneValue = userPref.callOneValue;
     callOneSetting = userPref.callOneSetting;
     userCli = userPref.cli;
+}
+
+function genericErrorMessage(time) {
+  updateAlertMessage(
+    "w3-pale-red",
+    "<p>Something went wrong. Please try again later.</p>",
+    time
+  );
 }

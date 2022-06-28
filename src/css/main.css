@@ -8,7 +8,7 @@
 
 body {
   background: #fdfdfd;
-  font-family: "Noto Sans", sans-serif !important;
+  font-family: "Noto Sans", Arial, Helvetica, sans-serif !important;
   font-size: 1rem;
 }
 main {
@@ -157,6 +157,29 @@ form > input{
   100% { transform: rotate(360deg); }
 }
 /* SPINNER CSS END */
+
+/*CUSTOM SCROLLBAR START */
+/* width */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #919191; 
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #666; 
+}
+/* CUSTOM SCROLLBAR END */
+
 
 @media screen and (max-width: 768px) {
   .sonetel-input{
