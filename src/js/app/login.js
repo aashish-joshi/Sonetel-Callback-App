@@ -27,10 +27,12 @@ function login() {
       // 4. Store the user's default preferences if they aren't already present.
       if (!window.localStorage.getItem(userPrefCache)) {
         storeUserPref();
+        setDefaults();
+        getCliSettings();
       } else {
         loadUserPref();
       }
-      setDefaults();
+      // setDefaults();
 
       // 5. Hide the login form and show the Make call UI
       toggleDisplay(SIGNIN_FORM_ID, "hide");
@@ -55,8 +57,7 @@ function checkSignIn() {
     localStorage.getItem("access_token") &&
     localStorage.getItem("loggedIn") == "true"
   ) {
-    // Refresh the access token when the page is refreshed
-    //refreshAccessToken();
+    
     const checkToken = checkTokenExpiry();
     checkToken.then(() => {
       // Prepare to read the user's preferences
@@ -67,14 +68,12 @@ function checkSignIn() {
       userEmail = decodedToken.user_name;
       accountId = decodedToken.acc_id;
       userPrefCache = "user_" + accountId + "_" + userId;
+      loadUserPref();
 
       // don't show the login form
       toggleDisplay(SIGNIN_FORM_ID, "hide");
       toggleDisplay(MAKECALL_FORM_ID, "show");
 
-      // Load the user's preferences
-      loadUserPref();
-      setDefaults();
     });
   } else {
     // Hide the make call UI and show the login form
@@ -96,4 +95,5 @@ function logout() {
   toggleDisplay("settings", "hide");
   document.getElementById("arrowhead").classList.remove("icon-up");
   document.getElementById("arrowhead").classList.add("icon-down");
+  document.getElementById('callerId').innerHTML = null;
 }
