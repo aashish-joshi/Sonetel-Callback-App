@@ -1,3 +1,4 @@
+
 function simpleToggle(id) {
   const elem = document.getElementById(id);
   if (elem.classList.contains("w3-hide")) {
@@ -142,8 +143,10 @@ function genericErrorMessage(time) {
 
 
 function getCliSettings() {
-  /* Get the phone numbers that the user is allowed to use as caller ID
-  /account/<ACCOUNT_ID>/user/<USER_ID>?fields=phones -> for verified mobile numbers
+  /* 
+  Get the phone numbers that the user is allowed to use as caller ID
+  1. Verified mobile numbers added for call forwarding
+  2. Phone numbers purchased via Sonetel that can be used as caller ID.
   */
   
   const token = localStorage.getItem("access_token");
@@ -162,22 +165,24 @@ function getCliSettings() {
   const autoCliVal = 'automatic';
   autoCli.value = autoCliVal;
   autoCli.text = 'Automatic';
-  //autoCli.id = autoCliVal;
+
   if(cli == 'automatic'){
     autoCli.selected = true;
   }
   cliList.add(autoCli);
   
-
+  // Fetch options
   const options = {
     method: "GET",
     headers: reqHeader,
   };
   const checkToken = checkTokenExpiry();
   checkToken.then(() => {
+
     // Fetch the user's verified mobile numbers first
     const uriBase = `${API_BASE}/account/${accid}`;
-    var uriEndpoint = `/user/${userid}?fields=phones`;
+    var uriEndpoint = `/user/${userid}?fields=phones%2Clocation`;
+
     fetch(uriBase+uriEndpoint, options)
       .then((response) => {
         if (response.ok) {
@@ -189,19 +194,28 @@ function getCliSettings() {
       })
       .then((json) => {
         if (json !== false) {
-          const phoneList = json.response.phones.filter(filterVerifiedMobile);
+          const response = json.response;
+          const phoneList = response.phones.filter(filterVerifiedMobile);
+          const userCountry = response.location.country || "-";
           for (const ph of phoneList) {
             
+            
             const opt = document.createElement("option");
-            const ph_val = ph.phnum.trim();
-            opt.value = ph_val;
-            opt.text = ph_val;
-            //opt.id = ph_val;
-            if(cli == ph_val){
-              opt.selected = true;
-              setDefaultCli = true;
-            }
-            cliList.add(opt);
+            const phoneNumE164 = ph.phnum.trim();
+            
+            const formattedNumber = formatMobileNumber(phoneNumE164,userCountry);
+
+            formattedNumber.then( (resolvedValue) => {
+              opt.value = phoneNumE164;
+              opt.text = resolvedValue;
+
+              if(cli == phoneNumE164){
+                opt.selected = true;
+                setDefaultCli = true;
+              }
+              cliList.add(opt);
+            });
+
           }
         }
         if(!setDefaultCli){
@@ -210,27 +224,26 @@ function getCliSettings() {
       })
       .catch((err) => console.log(err));
 
-      // TODO: Fetch the subscribed numbers that support outgoing CLI
+      // Fetch the subscribed numbers that support outgoing CLI
       uriEndpoint = `/phonenumbersubscription?fields=submission`;
       fetch(uriBase+uriEndpoint, options)
       .then((response) => {
         if (response.ok) {
           return response.json();
         } else {
-          genericErrorMessage(3000);
+          updateAlertMessage("w3-pale-red", "<p>Unable to get caller ID settings. Please refresh the page to try again.</p>", 4000);
           return false;
         }
       })
       .then((json) => {
         if (json !== false) {
           const phoneList = json.response.filter(filterSubscribedNumbers);
-          for(ph of phoneList) {
+          for(phone of phoneList) {
             const opt = document.createElement("option");
-            const ph_val = ph.phnum.trim();
-            opt.value = ph_val;
-            opt.text = ph_val;
-            //opt.id = ph_val;
-            if(cli == ph_val){
+            const e164Number = phone.phnum.trim();
+            opt.value = e164Number;
+            opt.text = formatNumber(e164Number,phone.area_code,phone.country_code);
+            if(cli == e164Number){
               opt.selected = true;
               setDefaultCli = true;
             }
@@ -245,6 +258,31 @@ function getCliSettings() {
     
   });
   
+}
+
+async function formatMobileNumber(e164Number,userCountry){
+
+  // If user country is not defined, return the unformatted number.
+  if(userCountry == '-'){
+    return e164Number;
+  }
+  const uri = `https://api.sonetel.com${GEOLOOKUP_URI}?country=${userCountry}&phone-numbers=${e164Number}`;
+
+  const response = await fetch(uri);
+  if(response.ok){
+    const json = await response.json();
+    return json.response[0].formats["international"];
+    
+  }else{
+    return e164Number;
+  }
+
+}
+
+function formatNumber(e164Number,area_code,country_code) {
+  let telNumber = e164Number.substring(country_code.length);
+  telNumber = telNumber.substring(area_code.length);
+  return `+${country_code} ${area_code} ${telNumber}`;
 }
 
 function filterVerifiedMobile(phone) {
